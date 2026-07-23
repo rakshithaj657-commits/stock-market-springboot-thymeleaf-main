@@ -1,72 +1,38 @@
 pipeline {
+
     agent any
-
-    parameters {
-        choice(
-            name: 'ACTION',
-            choices: ['DEPLOY', 'REMOVE'],
-            description: 'Choose Action'
-        )
-    }
-
-    tools {
-        maven 'maven'
-    }
-
-    environment {
-        IMAGE_NAME = "rakshithaj657/stock-market-app:latest"
-    }
 
     stages {
 
-        stage('Build JAR') {
-            when {
-                expression { params.ACTION == 'DEPLOY' }
+        stage('Clone') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/rakshithaj657-commits/stock-market-springboot-thymeleaf-main.git'
             }
+        }
+
+        stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Build Docker Image') {
-            when {
-                expression { params.ACTION == 'DEPLOY' }
-            }
+        stage('Docker Build') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'
+                sh 'docker build -t stock-test .'
             }
         }
 
-        stage('Push Docker Image') {
-            when {
-                expression { params.ACTION == 'DEPLOY' }
-            }
+        stage('Docker Run') {
             steps {
-                script {
-                    docker.withRegistry('', 'dockerhub') {
-                        sh 'docker push $IMAGE_NAME'
-                    }
-                }
-            }
-        }
-
-        stage('Deploy') {
-            when {
-                expression { params.ACTION == 'DEPLOY' }
-            }
-            steps {
-                sh 'docker compose down || true'
-                sh 'docker compose pull'
-                sh 'docker compose up -d'
-            }
-        }
-
-        stage('Remove') {
-            when {
-                expression { params.ACTION == 'REMOVE' }
-            }
-            steps {
-                sh 'docker compose down'
+                sh '''
+                docker stop stock-container || true
+                docker rm stock-container || true
+                docker run -d \
+                --name stock-container \
+                -p 8080:8080 \
+                stock-test
+                '''
             }
         }
     }
