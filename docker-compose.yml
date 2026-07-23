@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
 
   mysql-container:
@@ -13,10 +15,7 @@ services:
       - "3306:3306"
 
     volumes:
-      - ./mysql-data:/var/lib/mysql
-
-    networks:
-      - springboot-mysql-network
+      - mysql-data:/var/lib/mysql
 
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
@@ -25,17 +24,20 @@ services:
       retries: 5
       start_period: 30s
 
+    networks:
+      - springboot-mysql-network
+
   springboot-app:
     image: rakshithaj657/stock-market-app:latest
     container_name: springboot-app
     restart: always
 
-    ports:
-      - "8085:8080"
-
     depends_on:
       mysql-container:
         condition: service_healthy
+
+    ports:
+      - "8085:8080"
 
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-container:3306/myapplication?createDatabaseIfNotExist=true
@@ -47,5 +49,7 @@ services:
 
 networks:
   springboot-mysql-network:
-    name: springboot-mysql-network
     driver: bridge
+
+volumes:
+  mysql-data:

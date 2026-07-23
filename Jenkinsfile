@@ -5,7 +5,7 @@ pipeline {
         choice(
             name: 'ACTION',
             choices: ['DEPLOY', 'REMOVE'],
-            description: 'Choose whether to deploy or remove containers'
+            description: 'Choose Action'
         )
     }
 
@@ -24,7 +24,6 @@ pipeline {
                 expression { params.ACTION == 'DEPLOY' }
             }
             steps {
-                echo "Building Spring Boot JAR..."
                 sh 'mvn clean package -DskipTests'
             }
         }
@@ -34,59 +33,41 @@ pipeline {
                 expression { params.ACTION == 'DEPLOY' }
             }
             steps {
-                echo "Building Docker Image..."
                 sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Push Docker Image') {
             when {
                 expression { params.ACTION == 'DEPLOY' }
             }
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+                    docker.withRegistry('', 'dockerhub') {
                         sh 'docker push $IMAGE_NAME'
                     }
                 }
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy') {
             when {
                 expression { params.ACTION == 'DEPLOY' }
             }
             steps {
-                echo "Deploying Application..."
                 sh 'docker compose down || true'
                 sh 'docker compose pull'
                 sh 'docker compose up -d'
             }
         }
 
-        stage('Remove Application') {
+        stage('Remove') {
             when {
                 expression { params.ACTION == 'REMOVE' }
             }
             steps {
-                echo "Removing Application..."
                 sh 'docker compose down'
-                sh 'docker image prune -af'
             }
-        }
-    }
-
-    post {
-        success {
-            echo "Pipeline executed successfully."
-        }
-
-        failure {
-            echo "Pipeline execution failed."
-        }
-
-        always {
-            echo "Pipeline completed."
         }
     }
 }
