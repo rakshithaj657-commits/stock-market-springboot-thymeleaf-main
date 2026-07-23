@@ -1,3 +1,5 @@
 mysql-data
-target/
 .git
+.gitignore
+README.md
+target/*.original
