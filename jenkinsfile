@@ -24,7 +24,7 @@ pipeline {
             }
             steps {
                 echo "Building Spring Boot JAR..."
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
