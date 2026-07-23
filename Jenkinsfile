@@ -5,7 +5,7 @@ pipeline {
         choice(
             name: 'ACTION',
             choices: ['DEPLOY', 'REMOVE'],
-            description: 'Choose whether to deploy or remove containers'
+            description: 'Choose DEPLOY or REMOVE'
         )
     }
 
@@ -35,11 +35,11 @@ pipeline {
             }
             steps {
                 echo "Building Docker Image..."
-                sh 'docker build -t $IMAGE_NAME .'
+                sh 'docker build --no-cache -t $IMAGE_NAME .'
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Login & Push Docker Image') {
             when {
                 expression { params.ACTION == 'DEPLOY' }
             }
@@ -58,9 +58,21 @@ pipeline {
             }
             steps {
                 echo "Deploying Application..."
-                sh 'docker compose down || true'
-                sh 'docker compose pull'
-                sh 'docker compose up -d'
+
+                sh 'docker compose down --remove-orphans || true'
+
+                sh 'docker compose pull || true'
+
+                sh 'docker compose up --build -d'
+            }
+        }
+
+        stage('Verify Deployment') {
+            when {
+                expression { params.ACTION == 'DEPLOY' }
+            }
+            steps {
+                sh 'docker ps'
             }
         }
 
@@ -70,13 +82,16 @@ pipeline {
             }
             steps {
                 echo "Removing Application..."
+
                 sh 'docker compose down'
+
                 sh 'docker image prune -af'
             }
         }
     }
 
     post {
+
         success {
             echo "Pipeline executed successfully."
         }
