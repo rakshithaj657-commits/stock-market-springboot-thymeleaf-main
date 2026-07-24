@@ -1,13 +1,11 @@
 pipeline {
-
     agent any
 
     stages {
 
         stage('Clone') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/rakshithaj657-commits/stock-market-springboot-thymeleaf-main.git'
+                checkout scm
             }
         }
 
@@ -19,19 +17,30 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t stock-test .'
+                sh 'docker build -t rakshithaj657/stock-market-app:latest .'
             }
         }
 
-        stage('Docker Run') {
+        stage('Docker Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push rakshithaj657/stock-market-app:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
             steps {
                 sh '''
-                docker stop stock-container || true
-                docker rm stock-container || true
-                docker run -d \
-                --name stock-container \
-                -p 8080:8080 \
-                stock-test
+                docker compose down
+                docker compose up -d --build
                 '''
             }
         }
